@@ -32,6 +32,7 @@ class UI:
         # Slots initialised on first use
         self.path_slot = None
         self.times_slot = None
+        self.sub_header_slot = None
         self.sub_base_slot = None
 
         self.iso_base_slot = None
@@ -39,6 +40,8 @@ class UI:
         self.front_base_slot = None
 
         self.sub_overlay_slot = None
+        self.opt_times_overlay_slot = None
+        self.opt_sub_header_slot = None
 
         self.iso_opt_slot = None
         self.top_opt_slot = None
@@ -65,6 +68,7 @@ class UI:
             with self.base_chart_container:
                 self.path_slot = st.empty()
                 self.times_slot = st.empty()
+                self.sub_header_slot = st.empty()
                 self.sub_base_slot = st.empty()
 
     def _ensure_base_gif_slots(self):
@@ -80,6 +84,8 @@ class UI:
         if self.overlay_container is None:
             self.overlay_container = st.container()
             with self.overlay_container:
+                self.opt_times_overlay_slot = st.empty()
+                self.opt_sub_header_slot = st.empty()
                 self.sub_overlay_slot = st.empty()
 
     def _ensure_opt_gif_slots(self):
@@ -109,10 +115,22 @@ class UI:
             slot = getattr(self, slot_name, None)
             if slot is not None:
                 slot.empty()
+        if self.sub_header_slot is not None:
+            self.sub_header_slot.empty()
         self.clear_base_gif_slots()
         if self.sub_overlay_slot is not None:
             self.sub_overlay_slot.empty()
+        if self.opt_times_overlay_slot is not None:
+            self.opt_times_overlay_slot.empty()
+        if self.opt_sub_header_slot is not None:
+            self.opt_sub_header_slot.empty()
         self.clear_opt_gif_slots()
+
+    def clear_opt_overlay_slots(self):
+        for slot_name in ("opt_times_overlay_slot", "opt_sub_header_slot", "sub_overlay_slot"):
+            slot = getattr(self, slot_name, None)
+            if slot is not None:
+                slot.empty()
 
     # ----------- draws -----------
     def draw_base_charts(self, S):
@@ -134,15 +152,32 @@ class UI:
                 key=self._next_chart_key(S, "plot_layer_times_base"),
             )
         if "pairs_point" in S.cache and "pairs_mean" in S.cache:
+            if self.sub_header_slot is not None:
+                self.sub_header_slot.subheader("Thermal Profile History")
             self.sub_base_slot.plotly_chart(
                 plot_substracte(S.cache["pairs_point"], S.cache["pairs_mean"], "Layer Substrate Temperature (base)"),
                 use_container_width=True,
                 key=self._next_chart_key(S, "plot_sub_base"),
             )
+        elif self.sub_header_slot is not None:
+            self.sub_header_slot.empty()
 
     def draw_opt_overlay_if_available(self, S):
         if "pp_opt" in S.cache and "pm_opt" in S.cache:
             self._ensure_overlay_slot()
+            base_layer_time = S.cache.get("info", {}).get("layer_time", [])
+            opt_layer_time = S.cache.get("info_opt", {}).get("layer_time", [])
+            if self.opt_times_overlay_slot is not None:
+                if base_layer_time or opt_layer_time:
+                    self.opt_times_overlay_slot.plotly_chart(
+                        plot_layer_times_overlay(base_layer_time, opt_layer_time),
+                        use_container_width=True,
+                        key=self._next_chart_key(S, "plot_layer_times_overlay"),
+                    )
+                else:
+                    self.opt_times_overlay_slot.empty()
+            if self.opt_sub_header_slot is not None:
+                self.opt_sub_header_slot.subheader("Thermal Profile History")
             self.sub_overlay_slot.plotly_chart(
                 plot_substracte_overlay(
                     S.cache.get("pairs_point", []),

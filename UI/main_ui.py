@@ -15,13 +15,10 @@ def show_optimization_section(S, ui, inputs, DIRS, GIFS, last_frame_path):
         return
 
     # --- Simulation Results ---
-    st.subheader("Printed Path & Layer Metrics")
-    ui.draw_base_charts(S)
-
-    st.subheader("Thermal Profile History")
-    ui.show_gifs("base", S, last_frame_path)
-
-    ui.export_section(S)
+    with st.expander("Simulation Results", expanded=True):
+        st.subheader("Printed Path & Layer Metrics")
+        ui.draw_base_charts(S)
+        ui.show_gifs("base", S, last_frame_path)
 
     st.markdown("---")
 
@@ -86,10 +83,23 @@ def show_optimization_section(S, ui, inputs, DIRS, GIFS, last_frame_path):
             except Exception as e:
                 st.error(f"❌ Optimization failed: {e}")
 
-    if "pp_opt" in S.cache and "pm_opt" in S.cache:
-        st.subheader("Optimized Results")
-        ui.draw_opt_overlay_if_available(S)
+    has_opt_results = "pp_opt" in S.cache and "pm_opt" in S.cache
+    with st.expander("Optimized Results", expanded=has_opt_results):
+        if has_opt_results:
+            ui.draw_opt_overlay_if_available(S)
+            if has_opt_gifs(GIFS):
+                st.markdown("#### Thermal Profile History (Optimized)")
+                ui.show_gifs("opt", S, last_frame_path)
+            if "g_opt" in S.cache:
+                st.download_button(
+                    "⬇️ Download optimized G-code",
+                    data=S.cache["g_opt"],
+                    file_name="optimized.gcode",
+                    mime="text/plain",
+                    key="dl_opt_gcode_results",
+                )
+        else:
+            ui.clear_opt_overlay_slots()
+            st.info("Run the optimization to see results here.")
 
-    if has_opt_gifs(GIFS):
-        st.markdown("#### Thermal Profile History (Optimized)")
-        ui.show_gifs("opt", S, last_frame_path)
+    ui.export_section(S)
